@@ -3,10 +3,19 @@ import os
 import socket
 import _thread
 
+'''
+import sys
+import time
+import serial
+import RPi.GPIO as GPIO
+from pycreate2 import Create2
+'''
+
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
+# HTTP server
 @app.route("/download", methods=['GET'])
 def download():
     if request.method == "GET":
@@ -15,7 +24,7 @@ def download():
         else:
             abort(404)
 
-
+# TCP server
 def connection():
     _thread.start_new_thread(UDPtransponder, ())
     TCP_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,10 +48,31 @@ def receiver(num, client_socket, client_addr):
             break
         data = recv_data.decode()
         print("Connection", num, client_addr, data)
-        if data == "auto" or data == "manu":
-            client_socket.send(("39%" + "\n").encode())
+        '''
+        if data[:4] == "auto" or data == "manu":
+            # ser.write('\x8E\x1A')
+            # battery = ser.read(2)
+            # print(battery)
+            # client_socket.send(("ACK: " + data + "\n").encode())
+            sensors = bot.get_sensors()
+            battery = sensors.battery_capacity
+            client_socket.send((str(battery) + "\n").encode())
+        if data[:4] == "STOP":
+            bot.drive_stop()
+        if data[:4] == "FWRD":
+            # print("forward")
+            bot.drive_straight(400 * data[4:] // 100)
+        if data[:4] == "BWRD":
+            bot.drive_straight(-400 * data[4:] // 100)
+        if data[:4] == "RGHT":
+            # bot.turn_angle(-100)
+            ser.write('b\x92\xFF\xC1\x00\x3F')
+        if data[:4] == "LEFT":
+            ser.write('b\x92\x00\x3F\xFF\xC1')
+        '''
 
 
+# UDP Server
 def UDPtransponder():
     UDP_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     UDP_socket.bind(("", 8864))
@@ -55,5 +85,16 @@ def UDPtransponder():
 
 
 if __name__ == '__main__':
+    '''
+    if sys.getdefaultencoding() != 'utf-8':
+        reload(sys)
+        sys.setdefaultencoding('utf-8')
+    ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200) # 19200
+    sysRunning_flag = True
+    bot = Create2('/dev/ttyUSB0', 115200)
+    time.sleep(0.1)
+    bot.start()  # equals to \x80
+    bot.safe()
+    '''
     _thread.start_new_thread(connection, ())
     app.run(host="0.0.0.0", port=5000, debug=True)  # blocking
